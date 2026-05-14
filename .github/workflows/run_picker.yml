@@ -21,9 +21,16 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install . 
+          python -m pip install --upgrade pip
+          # 尝试直接安装当前项目及其依赖
+          if [ -f pyproject.toml ]; then
+            pip install .
+          elif [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          else
+            echo "未找到依赖文件，尝试强制安装通用依赖"
+            pip install akshare loguru feishu-bot pandas
+          fi
 
       - name: Run Stock Picker
         env:
