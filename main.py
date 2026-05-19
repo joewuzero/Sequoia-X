@@ -73,7 +73,12 @@ def main() -> None:
             PrivatePlacementStrategy(engine=engine, settings=settings),
         ]
 
+        from collections import defaultdict
+
         notifier = FeishuNotifier(settings)
+
+        strategy_results: dict[str, list[str]] = {}
+        strategy_count: dict[str, int] = defaultdict(int)
 
         # 5. 遍历策略，有结果则推送至对应机器人
         for strategy in strategies:
@@ -81,7 +86,8 @@ def main() -> None:
             logger.info(f"执行策略：{strategy_name}")
 
             selected: list[str] = strategy.run()
-            logger.info(f"{strategy_name} 选出 {len(selected)} 只股票")
+            strategy_results[strategy_name] = selected
+            logger.info(f"{strategy_name} 选出 {len(selected)} 个")
 
             if selected:
                 notifier.send(
@@ -91,6 +97,33 @@ def main() -> None:
                 )
             else:
                 logger.info(f"{strategy_name} 无选股结果，跳过推送")
+
+        # 6. 统计被多个策略同时选中的股票
+        stock_strategies: dict[str, list[str]] = defaultdict(list)
+        for strategy_name, selected in strategy_results.items():
+            for stock in selected:
+                stock_strategies[stock].append(strategy_name)
+
+        consensus_stocks = {
+            stock: strategies_list
+            for stock, strategies_list in stock_strategies.items()
+            if len(strategies_list) >= 2
+        }
+
+        if consensus_stocks:
+            consensus_symbols = list(consensus_stocks.keys())
+            strategy_names = list(consensus_stocks.values())
+            detail = ", ".join(
+                f"{sym}（{len(s)}策略: {', '.join(s)}）"
+                for sym, s in consensus_stocks.items()
+            )
+            logger.info(f"共振股票：{len(consensus_symbols)} 只 - {detail}")
+            notifier.send_consensus(
+                symbols=consensus_symbols,
+                stock_strategies=consensus_stocks,
+            )
+        else:
+            logger.info("无共振股票（无被2个及以上策略同时选中的股票）")
 
     except Exception:
         try:
