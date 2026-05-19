@@ -3,7 +3,7 @@ name: Sequoia-X Daily Pick
 on:
   schedule:
     # 每天周一到周五 北京时间 18:30 运行 (UTC 19:15)
-    - cron: '15 11 * * 1-5'
+    - cron: '30 9 * * 1-5'
   workflow_dispatch: # 允许你手动点击运行测试
 
 jobs:
